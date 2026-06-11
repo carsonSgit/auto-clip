@@ -3,7 +3,7 @@ import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Form, Request, UploadFile
+from fastapi import FastAPI, Form, HTTPException, Request, UploadFile
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -125,7 +125,7 @@ def job_status(job_id: str):
     with SessionLocal() as session:
         job = session.get(Job, job_id)
         if job is None:
-            return {"error": "not found"}
+            raise HTTPException(status_code=404, detail="job not found")
         return _job_dict(job)
 
 
