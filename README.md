@@ -32,6 +32,12 @@ Downloads 1–2 public conference talks into `./data/samples/` — upload one vi
 Everything visual reads from `brandkit/brand.yaml` + `brandkit/assets/`. Swap in real
 company logo/fonts/colors there; no code changes needed. Placeholder assets ship by default.
 
+## Measured performance (i7-1360P, CPU-only)
+
+A 12.4-min 1080p talk, cold run: ~3 min transcription (small int8, after one-time
+~460MB model download) + ~2.5 min for scene detection, selection, and rendering
+3 clips × 4 formats — about 0.5× source duration total.
+
 ## Notes
 
 - CPU-only by design (dev laptop has no NVIDIA GPU). Whisper model defaults to
