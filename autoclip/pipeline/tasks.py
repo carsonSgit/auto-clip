@@ -70,13 +70,15 @@ def run_job(job_id: str) -> None:
         src_info = media.probe_video(source)
         _set_status(job_id, "transcribing", duration_seconds=src_info["duration"])
 
-        # --- Transcribe ---
-        audio = paths["work"] / "audio.wav"
-        media.extract_audio(source, audio)
-        transcript = transcribe.transcribe(audio)
-        (paths["output"] / "transcript.json").write_text(
-            json.dumps(transcript, indent=2), encoding="utf-8"
-        )
+        # --- Transcribe (reuse prior transcript on re-runs) ---
+        transcript_path = paths["output"] / "transcript.json"
+        if transcript_path.is_file():
+            transcript = json.loads(transcript_path.read_text(encoding="utf-8"))
+        else:
+            audio = paths["work"] / "audio.wav"
+            media.extract_audio(source, audio)
+            transcript = transcribe.transcribe(audio)
+            transcript_path.write_text(json.dumps(transcript, indent=2), encoding="utf-8")
 
         # --- Scene detection ---
         _set_status(job_id, "detecting_scenes")
@@ -92,10 +94,11 @@ def run_job(job_id: str) -> None:
         if not highlights:
             raise RuntimeError("No usable highlights found (transcript may be empty or too short).")
         with SessionLocal() as session:
+            session.query(Clip).filter_by(job_id=job_id).delete()  # idempotent re-runs
             for i, h in enumerate(highlights):
                 session.add(Clip(
                     job_id=job_id, index=i,
-                    start_seconds=h["start"], end_seconds=h["end"],
+                    start_seconds=float(h["start"]), end_seconds=float(h["end"]),
                     title=h["title"], rationale=h["rationale"],
                 ))
             session.commit()
