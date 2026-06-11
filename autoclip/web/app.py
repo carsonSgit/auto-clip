@@ -1,4 +1,5 @@
 import shutil
+import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -85,6 +86,7 @@ def create_job(
         )
 
     job = Job(
+        id=uuid.uuid4().hex,  # column default fires at flush; path below needs it now
         source_filename=file.filename or "upload",
         context_text=context_text.strip(),
         clip_count=max(1, min(clip_count, 10)),
