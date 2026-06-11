@@ -23,10 +23,21 @@
         <input type="number" id="max_clip_seconds" name="max_clip_seconds" min="10" value="{{ defaults.max_clip_seconds }}">
       </div>
     </div>
-    <button type="submit">Upload &amp; process</button>
-    <p class="muted">Processing is CPU-only and unattended — a 15 min talk takes roughly 20–45 min. Leave this tab open or come back later.</p>
+    <button type="submit" id="submit-btn">Upload &amp; process</button>
+    <p class="muted" id="upload-note">Processing is CPU-only — a 12 min talk takes roughly 6 min after upload. You can close the tab and come back.</p>
   </form>
 </div>
+
+<script>
+  document.querySelector("form").addEventListener("submit", () => {
+    const btn = document.getElementById("submit-btn");
+    btn.textContent = "Uploading… don't close this tab";
+    document.getElementById("upload-note").textContent =
+      "Large files take a while to upload — you'll be redirected to the job page when it's done.";
+    // Disable after this tick so the click still submits the form.
+    setTimeout(() => { btn.disabled = true; btn.style.opacity = 0.6; }, 0);
+  });
+</script>
 
 <div class="panel">
   <h2>Jobs</h2>
