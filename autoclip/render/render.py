@@ -1,9 +1,11 @@
 """Per-clip rendering across all platform formats."""
 
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from autoclip import media
+from autoclip.config import settings
 from autoclip.render.ffmpeg_cmds import build_render_command
 from autoclip.render.formats import FORMATS
 from autoclip.render.layout import compute_layout
@@ -31,9 +33,9 @@ def render_clip(
 
     clip_dir = out_dir / f"clip_{clip['index']}"
     clip_dir.mkdir(parents=True, exist_ok=True)
-    outputs: dict[str, Path] = {}
 
-    for fmt_name, fmt in FORMATS.items():
+    def _render_format(fmt_name: str) -> tuple[str, Path]:
+        fmt = FORMATS[fmt_name]
         layout = compute_layout(fmt, src_info["width"], src_info["height"], logo_w, logo_h, brand)
         ass_path = work_dir / f"clip_{clip['index']}_{fmt_name}.ass"
         build_ass(
@@ -49,6 +51,10 @@ def render_clip(
         )
         logger.info("Rendering clip %s %s", clip["index"], fmt_name)
         media._run(cmd)
-        outputs[fmt_name] = out_path
+        return fmt_name, out_path
+
+    workers = max(1, settings.render_parallelism)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        outputs = dict(pool.map(_render_format, FORMATS))
 
     return outputs

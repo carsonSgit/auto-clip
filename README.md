@@ -27,6 +27,24 @@ Downloads 1–2 public conference talks into `./data/samples/` — upload one vi
 
 `./data/outputs/<job_id>/` — `transcript.json`, then per clip: platform MP4s and post copy.
 
+## Captions
+
+Default is word-level animated captions (active word highlighted in the brand
+accent, social style). Set `subtitles.mode: segment` in `brandkit/brand.yaml`
+for classic phrase subtitles. Segments without word timestamps fall back to
+phrase rendering automatically.
+
+## Maintenance
+
+Failed stages retry once automatically (reusing the saved transcript). Renders
+run `RENDER_PARALLELISM` ffmpeg processes at a time (default 2). Reclaim disk
+from old jobs with:
+
+```bash
+docker compose run --rm web python scripts/cleanup.py            # dry run
+docker compose run --rm web python scripts/cleanup.py --apply    # delete uploads/work >14d
+```
+
 ## Branding
 
 Everything visual reads from `brandkit/brand.yaml` + `brandkit/assets/`. Swap in real

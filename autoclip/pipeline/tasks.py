@@ -44,8 +44,8 @@ def job_paths(job_id: str) -> dict[str, Path]:
     }
 
 
-@celery_app.task(name="autoclip.run_job")
-def run_job(job_id: str) -> None:
+@celery_app.task(name="autoclip.run_job", bind=True, max_retries=1)
+def run_job(self, job_id: str) -> None:
     init_db()
     paths = job_paths(job_id)
     paths["work"].mkdir(parents=True, exist_ok=True)
@@ -132,7 +132,13 @@ def run_job(job_id: str) -> None:
 
         _set_status(job_id, "complete")
     except Exception as exc:
-        logger.exception("Job %s failed", job_id)
+        logger.exception("Job %s failed (attempt %s)", job_id, self.request.retries + 1)
+        if self.request.retries < self.max_retries:
+            # One automatic retry; transcript reuse makes it cheap. Status stays
+            # visible to the user while the retry waits.
+            _set_status(job_id, "queued", error=f"Retrying after: {type(exc).__name__}: {exc}")
+            _cleanup_work(paths["work"])
+            raise self.retry(exc=exc, countdown=15)
         _set_status(job_id, "failed", error=f"{type(exc).__name__}: {exc}")
     finally:
         _cleanup_work(paths["work"])

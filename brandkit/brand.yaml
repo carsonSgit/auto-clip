@@ -20,6 +20,7 @@ logo:
   width_frac: 0.22                 # logo width as fraction of canvas width
 
 subtitles:
+  mode: word            # word = animated social-style captions; segment = classic phrases
   font_size: 64
   text_color: "#FFFFFF"
   outline_color: "#000000"

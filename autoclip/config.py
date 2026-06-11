@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     anthropic_model: str = "claude-sonnet-4-6"
 
+    render_parallelism: int = 2  # concurrent ffmpeg renders; ffmpeg is itself multithreaded
+
     default_clip_count: int = 4
     min_clip_seconds: int = 20
     max_clip_seconds: int = 90
