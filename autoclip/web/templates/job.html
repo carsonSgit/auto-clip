@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h2>{{ job.source_filename }}</h2>
+  <p>
+    Status: <span class="status" id="status-pill">{{ job.status }}</span>
+    {% if job.duration_seconds %}<span class="muted"> · source {{ "%.0f"|format(job.duration_seconds) }}s</span>{% endif %}
+    {% if job.selector_used %}<span class="muted"> · highlights via {{ job.selector_used }}</span>{% endif %}
+  </p>
+  {% if job.error %}<div class="error-box">{{ job.error }}</div>{% endif %}
+
+  {% if job.clips %}
+  <h3>Clips</h3>
+  <table>
+    <tr><th>#</th><th>Title</th><th>Range</th><th>Status</th></tr>
+    {% for clip in job.clips %}
+    <tr>
+      <td>{{ clip.index }}</td>
+      <td>{{ clip.title }}</td>
+      <td>{{ "%.0f"|format(clip.start_seconds) }}s – {{ "%.0f"|format(clip.end_seconds) }}s</td>
+      <td>{{ clip.status }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+</div>
+
+<div class="panel">
+  <h3>Outputs</h3>
+  {% if outputs %}
+  <ul>
+    {% for f in outputs %}
+    <li><a href="{{ f.url }}" download>{{ f.label }}</a></li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="muted" id="outputs-empty">Nothing yet — outputs appear here as the pipeline progresses.</p>
+  {% endif %}
+</div>
+
+<script>
+  const TERMINAL = ["complete", "failed", "transcribed"];
+  async function poll() {
+    const res = await fetch(`/api/jobs/{{ job.id }}`);
+    if (!res.ok) return;
+    const data = await res.json();
+    const pill = document.getElementById("status-pill");
+    if (data.status !== pill.textContent) {
+      // Stage changed: reload so clips/outputs/error sections re-render.
+      location.reload();
+      return;
+    }
+    if (!TERMINAL.includes(data.status)) setTimeout(poll, 3000);
+  }
+  if (!TERMINAL.includes("{{ job.status }}")) setTimeout(poll, 3000);
+</script>
+{% endblock %}

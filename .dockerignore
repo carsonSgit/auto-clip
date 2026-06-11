@@ -1,0 +1,10 @@
+.git
+.remember
+data
+.env
+__pycache__
+*.pyc
+.pytest_cache
+.venv
+ROUGH_GUIDE.md
+prompt.md

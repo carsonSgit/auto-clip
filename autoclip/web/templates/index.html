@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="panel">
+  <h2>New job</h2>
+  <form method="post" action="/jobs" enctype="multipart/form-data">
+    <label for="file">Event video</label>
+    <input type="file" id="file" name="file" accept="video/*" required>
+
+    <label for="context_text">Event context (optional — event name, speakers, products, audience; used for highlight selection and post copy)</label>
+    <textarea id="context_text" name="context_text" placeholder="e.g. DevConf 2026 keynote by Jane Smith on our new analytics platform…"></textarea>
+
+    <div class="knobs">
+      <div>
+        <label for="clip_count">Clips</label>
+        <input type="number" id="clip_count" name="clip_count" min="1" max="10" value="{{ defaults.clip_count }}">
+      </div>
+      <div>
+        <label for="min_clip_seconds">Min length (s)</label>
+        <input type="number" id="min_clip_seconds" name="min_clip_seconds" min="5" value="{{ defaults.min_clip_seconds }}">
+      </div>
+      <div>
+        <label for="max_clip_seconds">Max length (s)</label>
+        <input type="number" id="max_clip_seconds" name="max_clip_seconds" min="10" value="{{ defaults.max_clip_seconds }}">
+      </div>
+    </div>
+    <button type="submit">Upload &amp; process</button>
+    <p class="muted">Processing is CPU-only and unattended — a 15 min talk takes roughly 20–45 min. Leave this tab open or come back later.</p>
+  </form>
+</div>
+
+<div class="panel">
+  <h2>Jobs</h2>
+  {% if jobs %}
+  <table>
+    <tr><th>Created</th><th>Source</th><th>Status</th><th></th></tr>
+    {% for job in jobs %}
+    <tr>
+      <td>{{ job.created_at }}</td>
+      <td>{{ job.source_filename }}</td>
+      <td><span class="status {{ 'running' if job.status not in ['complete', 'failed', 'queued', 'transcribed'] else job.status }}">{{ job.status }}</span></td>
+      <td><a href="/jobs/{{ job.id }}">view</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p class="muted">No jobs yet.</p>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+# Brand kit — all render styling reads from this file.
+# Swap the placeholder values/assets for real company branding; no code changes needed.
+
+name: "Placeholder Brand"   # [FILL: company name]
+
+colors:
+  canvas_bg: "#0F1B2D"      # background for vertical/square branded canvas
+  accent: "#3BA7F0"
+  text: "#FFFFFF"
+
+font:
+  family: "DejaVu Sans"     # must be installed in the container (fonts-dejavu-core is)
+  files: []                 # [FILL: drop .ttf files in assets/fonts/ and list paths here]
+
+logo:
+  light: "assets/logo_white.png"   # used on dark canvas backgrounds
+  dark: "assets/logo.png"          # used as corner bug on raw footage
+  corner: "top-right"              # for 16:9 corner bug
+  margin_px: 48
+  width_frac: 0.22                 # logo width as fraction of canvas width
+
+subtitles:
+  font_size: 64
+  text_color: "#FFFFFF"
+  outline_color: "#000000"
+  outline_px: 3
+  highlight_color: "#3BA7F0"       # word highlight color (stretch: word-level captions)
+
+headline:
+  enabled: true
+  template: "{title}"              # clip title rendered above the video on the canvas
+  font_size: 72
+
+# Voice guidance injected into LLM prompts for post copy and clip titles.
+voice: |
+  [FILL: brand voice from company guidelines]
+  Professional but human. Short sentences. No hype words, at most one emoji,
+  no more than three hashtags per post.
