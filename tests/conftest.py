@@ -1,3 +1,12 @@
+import os
+import tempfile
+
+# Must run before any autoclip import: settings is built at import time.
+_TMP = tempfile.mkdtemp(prefix="autoclip-tests-")
+os.environ["DATABASE_URL"] = f"sqlite:///{_TMP}/test.db"
+os.environ["DATA_DIR"] = os.path.join(_TMP, "data")
+os.environ["OUTPUT_DIR"] = os.path.join(_TMP, "outputs")
+
 import pytest
 
 
