@@ -20,8 +20,9 @@ def compute_layout(
     if fmt["layout"] == "landscape":
         bug_w = _even(W * logo_frac * 0.6)
         return {
+            "kind": "landscape",
             "W": W, "H": H,
-            "video_w": W, "video_h": H, "video_y": 0,
+            "video_w": W, "video_h": H, "video_x": 0, "video_y": 0,
             "logo_w": bug_w,
             "logo_x": f"{W}-w-{margin}",  # ffmpeg overlay expression (top-right)
             "logo_y": str(margin),
@@ -30,16 +31,22 @@ def compute_layout(
             "headline_margin_v": 0,
         }
 
-    # Canvas: full-width video, vertically biased slightly above center.
+    # Canvas: video fit within the frame (full-width for landscape sources,
+    # full-height for portrait), vertically biased slightly above center.
     video_w = W
     video_h = _even(video_w * source_h / source_w)
-    video_y = int((H - video_h) * 0.45)
+    if video_h > H:  # portrait/tall source: fit height instead
+        video_h = H
+        video_w = _even(video_h * source_w / source_h)
+    video_x = (W - video_w) // 2
+    video_y = max(0, int((H - video_h) * 0.45))
     scaled_logo_w = _even(W * logo_frac)
     scaled_logo_h = int(scaled_logo_w * logo_h / max(logo_w, 1))
     bottom_band = H - (video_y + video_h)
     return {
+        "kind": "canvas",
         "W": W, "H": H,
-        "video_w": video_w, "video_h": video_h, "video_y": video_y,
+        "video_w": video_w, "video_h": video_h, "video_x": video_x, "video_y": video_y,
         "logo_w": scaled_logo_w,
         "logo_x": f"({W}-w)/2",
         "logo_y": str(margin),

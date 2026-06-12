@@ -29,7 +29,7 @@ def test_canvas_command_has_branded_background(brand):
     cmd, layout = _cmd(brand, "9x16")
     joined = " ".join(cmd)
     assert "color=c=0x0F1B2D:s=1080x1920" in joined
-    assert f"overlay=0:{layout['video_y']}" in joined
+    assert f"overlay={layout['video_x']}:{layout['video_y']}" in joined
     assert "[2:v]" in joined  # lavfi background is the third input
 
 

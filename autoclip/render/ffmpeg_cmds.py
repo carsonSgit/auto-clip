@@ -31,7 +31,7 @@ def build_render_command(
     ]
     subs = f"subtitles=filename={ass_path}:fontsdir={fontsdir}"
 
-    if layout["video_y"] == 0 and layout["video_w"] == W:  # landscape: video fills frame
+    if layout["kind"] == "landscape":  # landscape: video fills frame
         filters = (
             f"[0:v]scale={W}:{H}:force_original_aspect_ratio=decrease,"
             f"pad={W}:{H}:(ow-iw)/2:(oh-ih)/2,setsar=1[v0];"
@@ -47,7 +47,7 @@ def build_render_command(
         filters = (
             f"[0:v]scale={layout['video_w']}:{layout['video_h']},setsar=1[vid];"
             f"[1:v]scale={layout['logo_w']}:-1[logo];"
-            f"[2:v][vid]overlay=0:{layout['video_y']}[b1];"
+            f"[2:v][vid]overlay={layout['video_x']}:{layout['video_y']}[b1];"
             f"[b1][logo]overlay={layout['logo_x']}:{layout['logo_y']}[b2];"
             f"[b2]{subs}[vout];"
             f"[0:a]{LOUDNORM}[aout]"
