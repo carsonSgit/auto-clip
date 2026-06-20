@@ -15,6 +15,13 @@ docker compose up --build
 Without an API key the pipeline still runs end-to-end using heuristic highlight
 selection (scene boundaries + speech density).
 
+## Deploy
+
+To host it (web + worker + Postgres + Redis), see [DEPLOY.md](DEPLOY.md) — a
+step-by-step Railway guide using `railway.json` and `scripts/railway_start.sh`.
+Note: this is a CPU-heavy, multi-service Docker app, so it is **not** deployable to
+serverless/edge runtimes like Cloudflare Workers or Pages.
+
 ## Test footage
 
 ```bash
