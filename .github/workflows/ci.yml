@@ -28,6 +28,6 @@ jobs:
         with:
           fetch-depth: 0
       - name: Pre-merge hygiene (scour)
-        uses: carsonSgit/scour@v1
+        uses: carsonSgit/scour@v0.4.0
         with:
           fail-on: error
