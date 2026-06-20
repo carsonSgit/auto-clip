@@ -142,6 +142,19 @@ def test_has_upload_capacity_keeps_processing_reserve(monkeypatch, tmp_path):
     assert not _has_upload_capacity(tmp_path, 1_100_000)
 
 
+def test_has_upload_capacity_uses_existing_parent_for_missing_upload_dir(monkeypatch, tmp_path):
+    seen = []
+    monkeypatch.setattr(settings, "upload_free_space_reserve_mb", 1)
+    monkeypatch.setattr(
+        web_app.shutil,
+        "disk_usage",
+        lambda path: seen.append(path) or type("Usage", (), {"free": 2_000_000})(),
+    )
+
+    assert _has_upload_capacity(tmp_path / "data" / "uploads", 900_000)
+    assert seen == [tmp_path]
+
+
 @pytest.mark.parametrize(
     ("job_id", "expected"),
     [

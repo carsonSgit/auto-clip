@@ -74,10 +74,10 @@ def _save_upload(src: BinaryIO, dest: Path, max_bytes: int) -> int:
 def _has_upload_capacity(upload_root: Path, upload_bytes: int) -> bool:
     """Return whether the upload volume has enough free space for upload plus processing headroom."""
     required = upload_bytes + settings.upload_free_space_reserve_bytes
-    try:
-        return shutil.disk_usage(upload_root).free >= required
-    except FileNotFoundError:
-        return shutil.disk_usage(upload_root.parent).free >= required
+    usage_root = upload_root
+    while not usage_root.exists() and usage_root != usage_root.parent:
+        usage_root = usage_root.parent
+    return shutil.disk_usage(usage_root).free >= required
 
 
 def _job_dict(job: Job) -> dict:
