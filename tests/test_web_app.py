@@ -7,10 +7,10 @@ from autoclip.config import settings
 from autoclip.db import init_db
 from autoclip.web import app as web_app
 from autoclip.web.app import (
-    _UploadStorageFull,
-    _UploadTooLarge,
     _has_upload_capacity,
     _save_upload,
+    _UploadStorageFull,
+    _UploadTooLarge,
     _valid_job_id,
 )
 
