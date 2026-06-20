@@ -1,3 +1,5 @@
+from itertools import pairwise
+
 from autoclip.llm.heuristic import select_highlights
 
 
@@ -12,7 +14,7 @@ def test_returns_requested_count_within_bounds(transcript):
 def test_no_overlaps(transcript):
     highlights = select_highlights(transcript, [], clip_count=5, min_seconds=10, max_seconds=40)
     ordered = sorted(highlights, key=lambda h: h["start"])
-    for a, b in zip(ordered, ordered[1:]):
+    for a, b in pairwise(ordered):
         assert a["end"] <= b["start"]
 
 

@@ -30,10 +30,15 @@ def test_square_source_on_1x1_uses_canvas_branch(brand):
     """Square 1080x1080 source on 1x1: must route to canvas branch (branded bg), not landscape."""
     layout = compute_layout(FORMATS["1x1"], 1080, 1080, 720, 200, brand)
     cmd = build_render_command(
-        Path("/data/src.mp4"), Path("/x/logo_white.png"), Path("/w/c0.ass"),
+        Path("/data/src.mp4"),
+        Path("/x/logo_white.png"),
+        Path("/w/c0.ass"),
         Path("/outputs/j/clip_0/1x1.mp4"),
-        clip_start=0.0, clip_end=30.0, layout=layout,
-        canvas_bg_hex="#0F1B2D", fontsdir=Path("/app/brandkit/assets/fonts"),
+        clip_start=0.0,
+        clip_end=30.0,
+        layout=layout,
+        canvas_bg_hex="#0F1B2D",
+        fontsdir=Path("/app/brandkit/assets/fonts"),
     )
     assert "color=" in " ".join(cmd)
 

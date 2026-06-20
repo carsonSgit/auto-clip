@@ -2,12 +2,14 @@
 
 from pathlib import Path
 
+# fmt: off
 ENCODE_ARGS = [
     "-r", "30",
     "-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p",
     "-c:a", "aac", "-b:a", "192k",
     "-movflags", "+faststart",
 ]
+# fmt: on
 LOUDNORM = "loudnorm=I=-16:TP=-1.5:LRA=11"
 
 
@@ -24,12 +26,16 @@ def build_render_command(
 ) -> list[str]:
     duration = round(clip_end - clip_start, 3)
     W, H = layout["W"], layout["H"]
+    # fmt: off
     base = [
         "ffmpeg", "-y", "-v", "error",
-        "-ss", f"{clip_start:.3f}", "-t", f"{duration:.3f}", "-i", str(source),
-        "-i", str(logo),
+        "-ss", f"{clip_start:.3f}", "-t", f"{duration:.3f}", "-i", source.as_posix(),
+        "-i", logo.as_posix(),
     ]
-    subs = f"subtitles=filename={ass_path}:fontsdir={fontsdir}"
+    # fmt: on
+    # libass needs forward slashes in the filter graph even on Windows; as_posix()
+    # also keeps the whole command host-deterministic (the runtime is Linux).
+    subs = f"subtitles=filename={ass_path.as_posix()}:fontsdir={fontsdir.as_posix()}"
 
     if layout["kind"] == "landscape":  # landscape: video fills frame
         filters = (
@@ -43,7 +49,7 @@ def build_render_command(
         cmd = base
     else:  # canvas: branded background, centered video, top logo
         bg = f"color=c=0x{canvas_bg_hex.lstrip('#')}:s={W}x{H}:r=30:d={duration:.3f}"
-        cmd = base + ["-f", "lavfi", "-i", bg]
+        cmd = [*base, "-f", "lavfi", "-i", bg]
         filters = (
             f"[0:v]scale={layout['video_w']}:{layout['video_h']},setsar=1[vid];"
             f"[1:v]scale={layout['logo_w']}:-1[logo];"
@@ -53,9 +59,12 @@ def build_render_command(
             f"[0:a]{LOUDNORM}[aout]"
         )
 
-    return cmd + [
+    # fmt: off
+    return [
+        *cmd,
         "-filter_complex", filters,
         "-map", "[vout]", "-map", "[aout]",
         *ENCODE_ARGS,
-        str(out_path),
+        out_path.as_posix(),
     ]
+    # fmt: on

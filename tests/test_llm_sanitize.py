@@ -2,13 +2,13 @@ import pytest
 
 from autoclip.llm.anthropic_provider import _extract_json, _sanitize_highlights
 
-
 # ---------------------------------------------------------------------------
 # _extract_json
 # ---------------------------------------------------------------------------
 
+
 def test_extract_json_plain_array():
-    result = _extract_json('[1, 2, 3]')
+    result = _extract_json("[1, 2, 3]")
     assert result == [1, 2, 3]
 
 
@@ -30,6 +30,7 @@ def test_extract_json_no_json_raises():
 # ---------------------------------------------------------------------------
 # _sanitize_highlights  (reuses the `transcript` fixture from conftest)
 # ---------------------------------------------------------------------------
+
 
 def _item(start, end, title="Test Clip", rationale="A good reason"):
     return {"start": start, "end": end, "title": title, "rationale": rationale}
@@ -89,15 +90,9 @@ def test_sanitize_all_unusable_raises(transcript):
 
 def test_sanitize_truncates_to_clip_count(transcript):
     # Provide 5 valid non-overlapping items; clip_count=3 → only 3 returned
-    data = [
-        _item(0.0, 15.0, title=f"Clip {i}")
-        for i in range(5)
-    ]
+    data = [_item(0.0, 15.0, title=f"Clip {i}") for i in range(5)]
     # Make them non-overlapping: spread them across the transcript
-    data = [
-        _item(float(i * 20), float(i * 20 + 15), title=f"Clip {i}")
-        for i in range(5)
-    ]
+    data = [_item(float(i * 20), float(i * 20 + 15), title=f"Clip {i}") for i in range(5)]
     # Only first 4 will land in segment-covered regions (0-50 and 70-120)
     # Use segments we know exist: 0-15, 20-35, 70-85, 90-105
     data = [

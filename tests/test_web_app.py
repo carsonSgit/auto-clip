@@ -6,13 +6,15 @@ from fastapi.testclient import TestClient
 from autoclip.config import settings
 from autoclip.db import init_db
 from autoclip.web import app as web_app
+from autoclip.web.app import _save_upload, _UploadTooLarge, _valid_job_id
 
 
 @pytest.fixture
 def client(monkeypatch):
     sent = []
-    monkeypatch.setattr(web_app.celery_app, "send_task",
-                        lambda name, args=None, **kw: sent.append((name, args)))
+    monkeypatch.setattr(
+        web_app.celery_app, "send_task", lambda name, args=None, **kw: sent.append((name, args))
+    )
     init_db()
     c = TestClient(web_app.app)
     c.sent_tasks = sent
@@ -81,3 +83,51 @@ def test_job_status_unknown_is_404(client):
 def test_job_page_unknown_is_404(client):
     resp = client.get("/jobs/nope")
     assert resp.status_code == 404
+
+
+def test_healthz_ok(client):
+    resp = client.get("/healthz")
+    assert resp.status_code == 200
+    assert resp.json() == {"status": "ok"}
+
+
+def test_upload_rejected_when_too_large(client, monkeypatch):
+    monkeypatch.setattr(settings, "max_upload_mb", 0)  # any non-empty file exceeds the limit
+    resp = client.post(
+        "/jobs",
+        files={"file": ("talk.mp4", io.BytesIO(b"some bytes"), "video/mp4")},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 413
+    assert b"too large" in resp.content.lower()
+    assert client.sent_tasks == []  # no job queued
+
+
+@pytest.mark.parametrize(
+    ("job_id", "expected"),
+    [
+        ("a" * 32, True),
+        ("0123456789abcdef0123456789abcdef", True),
+        ("A" * 32, False),  # uppercase is not produced by uuid4().hex
+        ("a" * 31, False),  # too short
+        ("a" * 33, False),  # too long
+        ("../etc/passwd", False),  # path traversal attempt
+        ("", False),
+    ],
+)
+def test_valid_job_id(job_id, expected):
+    assert _valid_job_id(job_id) is expected
+
+
+def test_save_upload_aborts_when_too_large(tmp_path):
+    dest = tmp_path / "out.bin"
+    with pytest.raises(_UploadTooLarge):
+        _save_upload(io.BytesIO(b"x" * 1000), dest, max_bytes=100)
+
+
+def test_save_upload_writes_full_file(tmp_path):
+    dest = tmp_path / "out.bin"
+    payload = b"hello world" * 10
+    written = _save_upload(io.BytesIO(payload), dest, max_bytes=10_000)
+    assert written == len(payload)
+    assert dest.read_bytes() == payload

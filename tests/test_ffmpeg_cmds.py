@@ -8,10 +8,15 @@ from autoclip.render.layout import compute_layout
 def _cmd(brand, fmt_name):
     layout = compute_layout(FORMATS[fmt_name], 1920, 1080, 720, 200, brand)
     return build_render_command(
-        Path("/data/src.mp4"), Path("/x/logo_white.png"), Path("/w/c0.ass"),
+        Path("/data/src.mp4"),
+        Path("/x/logo_white.png"),
+        Path("/w/c0.ass"),
         Path("/outputs/j/clip_0") / f"{fmt_name}.mp4",
-        clip_start=12.5, clip_end=42.5, layout=layout,
-        canvas_bg_hex="#0F1B2D", fontsdir=Path("/app/brandkit/assets/fonts"),
+        clip_start=12.5,
+        clip_end=42.5,
+        layout=layout,
+        canvas_bg_hex="#0F1B2D",
+        fontsdir=Path("/app/brandkit/assets/fonts"),
     ), layout
 
 

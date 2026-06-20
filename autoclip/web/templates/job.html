@@ -3,7 +3,7 @@
 <div class="panel">
   <h2>{{ job.source_filename }}</h2>
   <p>
-    Status: <span class="status" id="status-pill">{{ job.status }}</span>
+    Status: <span class="status {{ 'running' if job.status not in ['complete', 'failed', 'queued', 'transcribed'] else job.status }}" id="status-pill">{{ job.status }}</span>
     {% if job.duration_seconds %}<span class="muted"> · source {{ "%.0f"|format(job.duration_seconds) }}s</span>{% endif %}
     {% if job.selector_used %}<span class="muted"> · highlights via {{ job.selector_used }}</span>{% endif %}
   </p>
@@ -18,7 +18,7 @@
       <td>{{ clip.index }}</td>
       <td>{{ clip.title }}</td>
       <td>{{ "%.0f"|format(clip.start_seconds) }}s – {{ "%.0f"|format(clip.end_seconds) }}s</td>
-      <td>{{ clip.status }}</td>
+      <td><span class="status {{ 'running' if clip.status not in ['complete', 'failed', 'queued', 'transcribed'] else clip.status }}">{{ clip.status }}</span></td>
     </tr>
     {% endfor %}
   </table>

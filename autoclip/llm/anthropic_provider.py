@@ -40,7 +40,7 @@ POST_COPY_SCHEMA = {
 def _client():
     import anthropic
 
-    return anthropic.Anthropic(api_key=settings.anthropic_api_key)
+    return anthropic.Anthropic(api_key=settings.anthropic_api_key.get_secret_value())
 
 
 def _complete_json(system: str, user: str, schema: dict):
@@ -63,17 +63,22 @@ def _complete_json(system: str, user: str, schema: dict):
             if attempt == 1:
                 raise
             messages.append({"role": "assistant", "content": text})
-            messages.append({
-                "role": "user",
-                "content": f"Your response failed validation: {exc}. "
-                           "Reply with ONLY the corrected JSON, no other text.",
-            })
+            messages.append(
+                {
+                    "role": "user",
+                    "content": f"Your response failed validation: {exc}. "
+                    "Reply with ONLY the corrected JSON, no other text.",
+                }
+            )
 
 
 def _extract_json(text: str):
     text = text.strip()
     if text.startswith("```"):
-        text = text.split("```")[1].lstrip("json").strip()
+        # Take the body between the opening and closing fence, then drop an
+        # optional language tag. (removeprefix, not lstrip — lstrip strips the
+        # character *set* {j,s,o,n}, which would corrupt some payloads.)
+        text = text.split("```")[1].removeprefix("json").strip()
     start = min((i for i in (text.find("["), text.find("{")) if i >= 0), default=-1)
     if start < 0:
         raise ValueError("no JSON found in response")
@@ -119,16 +124,14 @@ def _sanitize_highlights(
     data: list[dict], transcript: dict, clip_count: int, min_seconds: float, max_seconds: float
 ) -> list[dict]:
     """Clamp to media duration, snap to segment boundaries, drop invalid/overlapping."""
-    duration = transcript.get("duration", 0) or max(
-        (s["end"] for s in transcript["segments"]), default=0
-    )
+    duration = transcript.get("duration", 0) or max((s["end"] for s in transcript["segments"]), default=0)
     starts = sorted(s["start"] for s in transcript["segments"])
     ends = sorted(s["end"] for s in transcript["segments"])
 
     def snap(value: float, candidates: list[float]) -> float:
         return min(candidates, key=lambda c: abs(c - value)) if candidates else value
 
-    cleaned = []
+    cleaned: list[dict] = []
     for item in sorted(data, key=lambda d: d["start"]):
         start = snap(max(0.0, min(item["start"], duration)), starts)
         end = snap(max(0.0, min(item["end"], duration)), ends)
@@ -136,12 +139,14 @@ def _sanitize_highlights(
             continue
         if any(start < c["end"] and end > c["start"] for c in cleaned):
             continue
-        cleaned.append({
-            "start": round(start, 3),
-            "end": round(end, 3),
-            "title": item["title"].strip()[:200],
-            "rationale": item["rationale"].strip(),
-        })
+        cleaned.append(
+            {
+                "start": round(start, 3),
+                "end": round(end, 3),
+                "title": item["title"].strip()[:200],
+                "rationale": item["rationale"].strip(),
+            }
+        )
     if not cleaned:
         raise ValueError("LLM returned no usable highlight ranges")
     return cleaned[:clip_count]
@@ -150,7 +155,7 @@ def _sanitize_highlights(
 def generate_post_copy(clips: list[dict], context_text: str, brand_voice: str) -> dict:
     """Returns {clip_index_str: {platform: copy}} for linkedin/instagram/tiktok/youtube."""
     clip_lines = "\n\n".join(
-        f"Clip {i}: \"{c['title']}\"\nTranscript excerpt: {c['excerpt']}" for i, c in enumerate(clips)
+        f'Clip {i}: "{c["title"]}"\nTranscript excerpt: {c["excerpt"]}' for i, c in enumerate(clips)
     )
     system = (
         "You write social media post copy for event highlight clips. "

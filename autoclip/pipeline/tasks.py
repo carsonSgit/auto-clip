@@ -9,7 +9,7 @@ lands in a single except block that records the error on the job.
 import json
 import logging
 import shutil
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from autoclip import media, scenes, transcribe
@@ -29,6 +29,9 @@ EXCERPT_CHARS = 220
 def _set_status(job_id: str, status: str, error: str | None = None, **fields) -> None:
     with SessionLocal() as session:
         job = session.get(Job, job_id)
+        if job is None:
+            logger.warning("Cannot set status %r: job %s no longer exists", status, job_id)
+            return
         job.status = status
         job.error = error
         for key, value in fields.items():
@@ -54,13 +57,16 @@ def run_job(self, job_id: str) -> None:
     try:
         with SessionLocal() as session:
             job = session.get(Job, job_id)
-            params = {
-                "context_text": job.context_text,
-                "clip_count": job.clip_count,
-                "min_clip_seconds": job.min_clip_seconds,
-                "max_clip_seconds": job.max_clip_seconds,
-                "source_filename": job.source_filename,
-            }
+            if job is None:
+                logger.error("Job %s not found; abandoning task", job_id)
+                return
+            # Read into typed locals before the session closes (the ORM attributes
+            # carry their declared types; a plain dict would widen them to object).
+            context_text: str = job.context_text
+            clip_count: int = job.clip_count
+            min_clip_seconds: int = job.min_clip_seconds
+            max_clip_seconds: int = job.max_clip_seconds
+            source_filename: str = job.source_filename
 
         brand = load_brand()
 
@@ -87,20 +93,29 @@ def run_job(self, job_id: str) -> None:
         # --- Highlight selection ---
         _set_status(job_id, "selecting_highlights")
         highlights, selector_used = selector.select_highlights(
-            transcript, scene_boundaries,
-            params["context_text"], brand.get("voice", ""),
-            params["clip_count"], params["min_clip_seconds"], params["max_clip_seconds"],
+            transcript,
+            scene_boundaries,
+            context_text,
+            brand.get("voice", ""),
+            clip_count,
+            min_clip_seconds,
+            max_clip_seconds,
         )
         if not highlights:
             raise RuntimeError("No usable highlights found (transcript may be empty or too short).")
         with SessionLocal() as session:
             session.query(Clip).filter_by(job_id=job_id).delete()  # idempotent re-runs
             for i, h in enumerate(highlights):
-                session.add(Clip(
-                    job_id=job_id, index=i,
-                    start_seconds=float(h["start"]), end_seconds=float(h["end"]),
-                    title=h["title"], rationale=h["rationale"],
-                ))
+                session.add(
+                    Clip(
+                        job_id=job_id,
+                        index=i,
+                        start_seconds=float(h["start"]),
+                        end_seconds=float(h["end"]),
+                        title=h["title"],
+                        rationale=h["rationale"],
+                    )
+                )
             session.commit()
         _set_status(job_id, "rendering", selector_used=selector_used)
 
@@ -109,8 +124,14 @@ def run_job(self, job_id: str) -> None:
         for i, h in enumerate(highlights):
             clip_info = {"index": i, "start": h["start"], "end": h["end"], "title": h["title"]}
             outputs = render_clip(
-                source, src_info, clip_info, transcript, brand,
-                settings.brandkit_dir, paths["work"], paths["output"],
+                source,
+                src_info,
+                clip_info,
+                transcript,
+                brand,
+                settings.brandkit_dir,
+                paths["work"],
+                paths["output"],
             )
             rendered[i] = outputs
             _mark_clip(job_id, i, "rendered")
@@ -118,16 +139,20 @@ def run_job(self, job_id: str) -> None:
         # --- Finalize: post copy + manifest ---
         _set_status(job_id, "finalizing")
         copy_inputs = [
-            {"title": h["title"], "excerpt": _excerpt(transcript, h["start"], h["end"])}
-            for h in highlights
+            {"title": h["title"], "excerpt": _excerpt(transcript, h["start"], h["end"])} for h in highlights
         ]
-        post_copy = selector.generate_post_copy(
-            copy_inputs, params["context_text"], brand.get("voice", "")
-        )
+        post_copy = selector.generate_post_copy(copy_inputs, context_text, brand.get("voice", ""))
         _write_post_copy(paths["output"] / "post_copy.md", highlights, post_copy)
         _write_manifest(
             paths["output"] / "manifest.json",
-            job_id, params, src_info, selector_used, highlights, rendered, post_copy, brand,
+            job_id,
+            source_filename,
+            src_info,
+            selector_used,
+            highlights,
+            rendered,
+            post_copy,
+            brand,
         )
 
         _set_status(job_id, "complete")
@@ -138,7 +163,7 @@ def run_job(self, job_id: str) -> None:
             # visible to the user while the retry waits.
             _set_status(job_id, "queued", error=f"Retrying after: {type(exc).__name__}: {exc}")
             _cleanup_work(paths["work"])
-            raise self.retry(exc=exc, countdown=15)
+            raise self.retry(exc=exc, countdown=15) from exc
         _set_status(job_id, "failed", error=f"{type(exc).__name__}: {exc}")
     finally:
         _cleanup_work(paths["work"])
@@ -152,9 +177,7 @@ def _mark_clip(job_id: str, index: int, status: str) -> None:
 
 
 def _excerpt(transcript: dict, start: float, end: float) -> str:
-    text = " ".join(
-        s["text"] for s in transcript["segments"] if s["start"] < end and s["end"] > start
-    )
+    text = " ".join(s["text"] for s in transcript["segments"] if s["start"] < end and s["end"] > start)
     return text[:EXCERPT_CHARS] + ("…" if len(text) > EXCERPT_CHARS else "")
 
 
@@ -168,16 +191,23 @@ def _write_post_copy(dest: Path, highlights: list[dict], post_copy: dict) -> Non
 
 
 def _write_manifest(
-    dest: Path, job_id: str, params: dict, src_info: dict, selector_used: str,
-    highlights: list[dict], rendered: dict, post_copy: dict, brand: dict,
+    dest: Path,
+    job_id: str,
+    source_filename: str,
+    src_info: dict,
+    selector_used: str,
+    highlights: list[dict],
+    rendered: dict,
+    post_copy: dict,
+    brand: dict,
 ) -> None:
     manifest = {
         "job_id": job_id,
-        "source_filename": params["source_filename"],
+        "source_filename": source_filename,
         "source": src_info,
         "brand": brand.get("name"),
         "selector": selector_used,
-        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "generated_at": datetime.now(UTC).isoformat(),
         "clips": [
             {
                 **h,

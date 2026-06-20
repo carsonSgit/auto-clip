@@ -28,17 +28,19 @@ def transcribe(audio_wav: Path) -> dict:
     for i, seg in enumerate(segments_iter):
         # float() coercion matters: faster-whisper returns numpy float64s,
         # which break psycopg2 parameter binding downstream.
-        segments.append({
-            "id": i,
-            "start": round(float(seg.start), 3),
-            "end": round(float(seg.end), 3),
-            "text": seg.text.strip(),
-            "speaker": None,  # populated by diarization in Phase 2
-            "words": [
-                {"word": w.word.strip(), "start": round(float(w.start), 3), "end": round(float(w.end), 3)}
-                for w in (seg.words or [])
-            ],
-        })
+        segments.append(
+            {
+                "id": i,
+                "start": round(float(seg.start), 3),
+                "end": round(float(seg.end), 3),
+                "text": seg.text.strip(),
+                "speaker": None,  # populated by diarization in Phase 2
+                "words": [
+                    {"word": w.word.strip(), "start": round(float(w.start), 3), "end": round(float(w.end), 3)}
+                    for w in (seg.words or [])
+                ],
+            }
+        )
 
     return {
         "language": info.language,

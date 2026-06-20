@@ -5,3 +5,12 @@ data/
 !data/.gitkeep
 .pytest_cache/
 .venv/
+.tools/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+build/
+dist/
+.claude/

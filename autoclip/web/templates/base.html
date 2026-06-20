@@ -4,38 +4,201 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>auto-clip</title>
+  <script>
+    // Apply saved theme before first paint to avoid a flash. Default: light.
+    (function () {
+      var t = localStorage.getItem("theme");
+      if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+    })();
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
-    :root { --bg: #0f1b2d; --panel: #16263d; --accent: #3ba7f0; --text: #e8eef5; --muted: #8aa0b8; }
-    * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); }
-    .wrap { max-width: 880px; margin: 0 auto; padding: 2rem 1rem; }
-    h1 { font-size: 1.4rem; } h1 a { color: var(--text); text-decoration: none; }
-    h1 span { color: var(--accent); }
-    .panel { background: var(--panel); border-radius: 10px; padding: 1.25rem; margin-bottom: 1.5rem; }
-    label { display: block; margin: .75rem 0 .25rem; color: var(--muted); font-size: .85rem; }
-    input[type=text], input[type=number], textarea, input[type=file] {
-      width: 100%; padding: .5rem; border-radius: 6px; border: 1px solid #2a3f5c;
-      background: var(--bg); color: var(--text); font: inherit;
+    :root {
+      /* Light theme (derived from the Linear brief's inverse surfaces) */
+      --canvas: #ffffff;
+      --surface-1: #f5f6f6;
+      --surface-2: #eeeff1;
+      --hairline: #e4e5e8;
+      --hairline-strong: #d6d7db;
+      --ink: #08090a;
+      --ink-muted: #3c3f44;
+      --ink-subtle: #6b6f76;
+      --ink-tertiary: #9a9da3;
+      --primary: #5e6ad2;
+      --on-primary: #ffffff;
+      --primary-hover: #4f5bc7;
+      --primary-focus: #5e69d1;
+      --success: #27a644;
+      --success-bg: #e3f4e8;
+      --danger: #b3403e;
+      --danger-bg: #f7e9e8;
     }
-    textarea { min-height: 5rem; }
-    .knobs { display: flex; gap: 1rem; } .knobs > div { flex: 1; }
-    button { margin-top: 1rem; background: var(--accent); color: #06121f; border: 0; padding: .6rem 1.4rem;
-             border-radius: 6px; font-weight: 600; cursor: pointer; font: inherit; }
+    [data-theme="dark"] {
+      /* Dark theme: canonical Linear tokens */
+      --canvas: #010102;
+      --surface-1: #0f1011;
+      --surface-2: #141516;
+      --hairline: #23252a;
+      --hairline-strong: #34343a;
+      --ink: #f7f8f8;
+      --ink-muted: #d0d6e0;
+      --ink-subtle: #8a8f98;
+      --ink-tertiary: #62666d;
+      --primary: #5e6ad2;
+      --on-primary: #ffffff;
+      --primary-hover: #828fff;
+      --primary-focus: #5e69d1;
+      --success: #4cc56a;
+      --success-bg: #122a18;
+      --danger: #e07d7d;
+      --danger-bg: #2a1414;
+    }
+
+    * { box-sizing: border-box; }
+    html { -webkit-font-smoothing: antialiased; }
+    body {
+      margin: 0;
+      font-family: "Inter", "SF Pro Display", -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+      font-size: 16px; line-height: 1.5; letter-spacing: -0.05px;
+      background: var(--canvas); color: var(--ink);
+    }
+
+    /* Top nav: 56px bar, wordmark left, theme toggle right */
+    .nav {
+      height: 56px; border-bottom: 1px solid var(--hairline);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 24px;
+    }
+    .nav-inner { max-width: 880px; margin: 0 auto; width: 100%; display: flex; align-items: center; justify-content: space-between; }
+    .wordmark { font-size: 16px; font-weight: 600; letter-spacing: -0.3px; color: var(--ink); text-decoration: none; }
+    .wordmark span { color: var(--primary); }
+    .tagline { font-size: 13px; font-weight: 400; color: var(--ink-subtle); margin-left: 12px; letter-spacing: 0; }
+
+    .theme-toggle {
+      background: none; border: 1px solid var(--hairline); border-radius: 8px;
+      width: 32px; height: 32px; padding: 0; cursor: pointer;
+      display: inline-flex; align-items: center; justify-content: center;
+      color: var(--ink-subtle); font-size: 14px; line-height: 1;
+    }
+    .theme-toggle:hover { background: var(--surface-1); color: var(--ink); }
+    .theme-toggle .moon { display: inline; }
+    .theme-toggle .sun { display: none; }
+    [data-theme="dark"] .theme-toggle .moon { display: none; }
+    [data-theme="dark"] .theme-toggle .sun { display: inline; }
+
+    .wrap { max-width: 880px; margin: 0 auto; padding: 32px 24px 96px; }
+
+    h2 {
+      font-size: 22px; font-weight: 500; line-height: 1.25; letter-spacing: -0.4px;
+      margin: 0 0 16px;
+    }
+    h3 {
+      font-size: 13px; font-weight: 500; line-height: 1.3; letter-spacing: 0.4px;
+      text-transform: uppercase; color: var(--ink-subtle); margin: 24px 0 12px;
+    }
+
+    .panel {
+      background: var(--surface-1); border: 1px solid var(--hairline);
+      border-radius: 12px; padding: 24px; margin-bottom: 24px;
+    }
+
+    label {
+      display: block; margin: 16px 0 6px;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.4px; color: var(--ink-subtle);
+    }
+    input[type=text], input[type=number], textarea, input[type=file] {
+      width: 100%; padding: 8px 12px; border-radius: 8px;
+      border: 1px solid var(--hairline-strong);
+      background: var(--canvas); color: var(--ink); font: inherit; letter-spacing: -0.05px;
+    }
+    input:focus, textarea:focus {
+      outline: 2px solid color-mix(in srgb, var(--primary-focus) 50%, transparent);
+      outline-offset: 0; border-color: var(--primary-focus);
+    }
+    textarea { min-height: 5rem; resize: vertical; }
+    .knobs { display: flex; gap: 16px; } .knobs > div { flex: 1; }
+
+    button[type=submit] {
+      margin-top: 24px; background: var(--primary); color: var(--on-primary);
+      border: 0; padding: 8px 14px; border-radius: 8px;
+      font-family: inherit; font-size: 14px; font-weight: 500; line-height: 1.2;
+      cursor: pointer; min-height: 40px;
+    }
+    button[type=submit]:hover { background: var(--primary-hover); }
+    button[type=submit]:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--primary-focus) 50%, transparent);
+      outline-offset: 2px;
+    }
+    button[type=submit]:disabled { opacity: 0.6; cursor: default; }
+
     table { width: 100%; border-collapse: collapse; }
-    th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #2a3f5c; font-size: .9rem; }
-    a { color: var(--accent); }
-    .status { display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .8rem; }
-    .status.complete, .status.transcribed { background: #1d4d33; color: #7de0a8; }
-    .status.failed { background: #4d1d1d; color: #e07d7d; }
-    .status.queued { background: #2a3f5c; color: var(--muted); }
-    .status.running { background: #2a3f5c; color: var(--accent); }
-    .error-box { background: #4d1d1d; color: #e0a3a3; padding: .75rem 1rem; border-radius: 6px; white-space: pre-wrap; }
-    .muted { color: var(--muted); }
+    th {
+      text-align: left; padding: 8px; font-size: 12px; font-weight: 500;
+      letter-spacing: 0.4px; text-transform: uppercase; color: var(--ink-subtle);
+      border-bottom: 1px solid var(--hairline);
+    }
+    td {
+      text-align: left; padding: 8px; font-size: 14px;
+      border-bottom: 1px solid var(--hairline);
+    }
+    tr:last-child td { border-bottom: 0; }
+
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    .status {
+      display: inline-block; padding: 2px 8px; border-radius: 9999px;
+      font-size: 12px; line-height: 1.4;
+      background: var(--surface-2); color: var(--ink-muted);
+      border: 1px solid var(--hairline);
+    }
+    .status.complete, .status.transcribed { background: var(--success-bg); color: var(--success); border-color: transparent; }
+    .status.failed { background: var(--danger-bg); color: var(--danger); border-color: transparent; }
+    .status.running { color: var(--primary); }
+
+    .error-box {
+      background: var(--danger-bg); color: var(--danger);
+      border: 1px solid color-mix(in srgb, var(--danger) 25%, transparent);
+      padding: 12px 16px; border-radius: 8px; white-space: pre-wrap;
+      font-size: 14px;
+    }
+    .muted { color: var(--ink-subtle); }
+    p.muted { font-size: 14px; }
+
+    ul { padding-left: 20px; margin: 0; }
+    li { padding: 4px 0; font-size: 14px; }
+
+    @media (max-width: 600px) {
+      .knobs { flex-direction: column; gap: 0; }
+      .tagline { display: none; }
+      .wrap { padding: 24px 16px 64px; }
+    }
   </style>
 </head>
 <body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <div>
+        <a class="wordmark" href="/">auto<span>-clip</span></a>
+        <span class="tagline">event footage &rarr; branded social clips</span>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="Toggle dark mode" onclick="toggleTheme()">
+        <svg class="moon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="sun" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+      </button>
+    </div>
+  </nav>
+  <script>
+    function toggleTheme() {
+      var root = document.documentElement;
+      var dark = root.getAttribute("data-theme") === "dark";
+      if (dark) { root.removeAttribute("data-theme"); localStorage.setItem("theme", "light"); }
+      else { root.setAttribute("data-theme", "dark"); localStorage.setItem("theme", "dark"); }
+    }
+  </script>
   <div class="wrap">
-    <h1><a href="/">auto<span>-clip</span></a> <small class="muted" style="font-weight:normal">event footage &rarr; branded social clips</small></h1>
     {% block content %}{% endblock %}
   </div>
 </body>

@@ -17,12 +17,14 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess:
 
 
 def probe(path: Path) -> dict:
+    # fmt: off
     proc = _run([
         "ffprobe", "-v", "error",
         "-print_format", "json",
         "-show_format", "-show_streams",
         str(path),
     ])
+    # fmt: on
     return json.loads(proc.stdout)
 
 
@@ -58,9 +60,11 @@ def probe_video(path: Path) -> dict:
 def extract_audio(source: Path, dest_wav: Path) -> None:
     """Extract 16 kHz mono WAV for transcription."""
     dest_wav.parent.mkdir(parents=True, exist_ok=True)
+    # fmt: off
     _run([
         "ffmpeg", "-y", "-v", "error",
         "-i", str(source),
         "-vn", "-ac", "1", "-ar", "16000",
         str(dest_wav),
     ])
+    # fmt: on

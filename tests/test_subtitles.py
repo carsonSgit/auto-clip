@@ -14,13 +14,22 @@ def test_ass_time_format():
 def test_build_ass_shifts_and_clips_segments(tmp_path, transcript, brand):
     layout = {"W": 1080, "H": 1920, "sub_margin_v": 280, "headline": True, "headline_margin_v": 160}
     dest = tmp_path / "subs.ass"
-    build_ass(transcript, clip_start=10.0, clip_end=30.0, layout=layout, brand=brand,
-              headline_text="Big Moment", dest=dest)
+    build_ass(
+        transcript,
+        clip_start=10.0,
+        clip_end=30.0,
+        layout=layout,
+        brand=brand,
+        headline_text="Big Moment",
+        dest=dest,
+    )
     content = dest.read_text(encoding="utf-8")
 
     assert "PlayResX: 1080" in content
     assert "Big Moment" in content
-    dialogue_lines = [l for l in content.splitlines() if l.startswith("Dialogue:") and ",Sub," in l]
+    dialogue_lines = [
+        line for line in content.splitlines() if line.startswith("Dialogue:") and ",Sub," in line
+    ]
     # Segments 10-15, 15-20, 20-25, 25-30 fall in range -> 4 caption events
     assert len(dialogue_lines) == 4
     assert dialogue_lines[0].split(",")[1] == "0:00:00.00"  # shifted to clip-relative time
@@ -29,9 +38,11 @@ def test_build_ass_shifts_and_clips_segments(tmp_path, transcript, brand):
 
 
 def test_build_ass_escapes_override_braces(tmp_path, brand):
-    transcript = {"segments": [
-        {"id": 0, "start": 0.0, "end": 5.0, "text": "curly {\\b1} attack", "speaker": None, "words": []},
-    ]}
+    transcript = {
+        "segments": [
+            {"id": 0, "start": 0.0, "end": 5.0, "text": "curly {\\b1} attack", "speaker": None, "words": []},
+        ]
+    }
     layout = {"W": 1920, "H": 1080, "sub_margin_v": 60, "headline": False, "headline_margin_v": 0}
     dest = tmp_path / "subs.ass"
     build_ass(transcript, 0.0, 5.0, layout, brand, headline_text="", dest=dest)

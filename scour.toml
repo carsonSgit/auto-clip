@@ -1,0 +1,7 @@
+# Scour pre-merge hygiene config (https://github.com/carsonSgit/scour).
+#
+# Fail builds only on errors. The one standing `dockerignore-missing` warning is a
+# known, accepted deviation: the Docker build context is the repository root (see
+# docker-compose.yml), so the authoritative .dockerignore lives at the repo root,
+# not beside docker/Dockerfile.
+fail_on = "error"

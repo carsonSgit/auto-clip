@@ -10,7 +10,7 @@ more than --keep-days ago. Final outputs are kept unless --outputs is passed.
 
 import argparse
 import shutil
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from autoclip.config import settings
 from autoclip.db import SessionLocal, init_db
@@ -25,12 +25,10 @@ def main() -> None:
     args = parser.parse_args()
 
     init_db()
-    cutoff = datetime.now(timezone.utc) - timedelta(days=args.keep_days)
+    cutoff = datetime.now(UTC) - timedelta(days=args.keep_days)
     with SessionLocal() as session:
         jobs = (
-            session.query(Job)
-            .filter(Job.status.in_(["complete", "failed"]), Job.updated_at < cutoff)
-            .all()
+            session.query(Job).filter(Job.status.in_(["complete", "failed"]), Job.updated_at < cutoff).all()
         )
         known_ids = {j.id for j in session.query(Job).all()}
 
@@ -56,8 +54,10 @@ def main() -> None:
         if args.apply:
             shutil.rmtree(path, ignore_errors=True)
 
-    print(f"{'Freed' if args.apply else 'Would free'} {freed / 1e9:.2f} GB "
-          f"({len(jobs)} finished jobs older than {args.keep_days}d)")
+    print(
+        f"{'Freed' if args.apply else 'Would free'} {freed / 1e9:.2f} GB "
+        f"({len(jobs)} finished jobs older than {args.keep_days}d)"
+    )
 
 
 if __name__ == "__main__":

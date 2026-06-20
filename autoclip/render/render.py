@@ -39,13 +39,23 @@ def render_clip(
         layout = compute_layout(fmt, src_info["width"], src_info["height"], logo_w, logo_h, brand)
         ass_path = work_dir / f"clip_{clip['index']}_{fmt_name}.ass"
         build_ass(
-            transcript, clip["start"], clip["end"], layout, brand,
-            headline_text=clip["title"], dest=ass_path,
+            transcript,
+            clip["start"],
+            clip["end"],
+            layout,
+            brand,
+            headline_text=clip["title"],
+            dest=ass_path,
         )
         out_path = clip_dir / f"{fmt_name}.mp4"
         cmd = build_render_command(
-            source, logo_light, ass_path, out_path,
-            clip["start"], clip["end"], layout,
+            source,
+            logo_light,
+            ass_path,
+            out_path,
+            clip["start"],
+            clip["end"],
+            layout,
             canvas_bg_hex=brand["colors"]["canvas_bg"],
             fontsdir=fontsdir,
         )

@@ -31,11 +31,7 @@ def select_highlights(
                 continue
             density = speech / length
             scene_snap = min((abs(end - b) for b in scene_boundaries), default=1e9)
-            score = (
-                density
-                + (0.15 if scene_snap < 1.0 else 0.0)
-                + 0.1 * min(length / max_seconds, 1.0)
-            )
+            score = density + (0.15 if scene_snap < 1.0 else 0.0) + 0.1 * min(length / max_seconds, 1.0)
             windows.append({"start": start, "end": end, "score": score, "seg_range": (i, j)})
 
     windows.sort(key=lambda w: -w["score"])
@@ -51,12 +47,14 @@ def select_highlights(
     for w in chosen:
         i, j = w["seg_range"]
         text = " ".join(s["text"] for s in segments[i : j + 1])
-        highlights.append({
-            "start": round(w["start"], 3),
-            "end": round(w["end"], 3),
-            "title": _title_from_text(text),
-            "rationale": "Heuristic pick: dense, well-bounded speech segment.",
-        })
+        highlights.append(
+            {
+                "start": round(w["start"], 3),
+                "end": round(w["end"], 3),
+                "title": _title_from_text(text),
+                "rationale": "Heuristic pick: dense, well-bounded speech segment.",
+            }
+        )
     return highlights
 
 

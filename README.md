@@ -56,6 +56,24 @@ A 12.4-min 1080p talk, cold run: ~3 min transcription (small int8, after one-tim
 ~460MB model download) + ~2.5 min for scene detection, selection, and rendering
 3 clips × 4 formats — about 0.5× source duration total.
 
+## Development
+
+Dependencies and tooling config live in `pyproject.toml` (single source of truth —
+the Docker image and CI install from it). For a local checkout:
+
+```bash
+python -m venv .venv && . .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -e ".[dev]"
+
+ruff check .          # lint
+ruff format .         # format
+mypy autoclip         # type check
+pytest --cov          # tests with coverage
+```
+
+The same gates run in CI on every push and pull request. Pre-merge hygiene is
+additionally checked by [scour](https://github.com/carsonSgit/scour).
+
 ## Notes
 
 - CPU-only by design (dev laptop has no NVIDIA GPU). Whisper model defaults to

@@ -21,8 +21,12 @@ def compute_layout(
         bug_w = _even(W * logo_frac * 0.6)
         return {
             "kind": "landscape",
-            "W": W, "H": H,
-            "video_w": W, "video_h": H, "video_x": 0, "video_y": 0,
+            "W": W,
+            "H": H,
+            "video_w": W,
+            "video_h": H,
+            "video_x": 0,
+            "video_y": 0,
             "logo_w": bug_w,
             "logo_x": f"{W}-w-{margin}",  # ffmpeg overlay expression (top-right)
             "logo_y": str(margin),
@@ -45,8 +49,12 @@ def compute_layout(
     bottom_band = H - (video_y + video_h)
     return {
         "kind": "canvas",
-        "W": W, "H": H,
-        "video_w": video_w, "video_h": video_h, "video_x": video_x, "video_y": video_y,
+        "W": W,
+        "H": H,
+        "video_w": video_w,
+        "video_h": video_h,
+        "video_x": video_x,
+        "video_y": video_y,
         "logo_w": scaled_logo_w,
         "logo_x": f"({W}-w)/2",
         "logo_y": str(margin),

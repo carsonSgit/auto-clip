@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -8,11 +8,19 @@ from autoclip.db import Base
 
 
 def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+    return datetime.now(UTC)
 
 
 # Pipeline stage order; a job's status is either one of these, "complete", or "failed".
-STAGES = ["queued", "ingesting", "transcribing", "detecting_scenes", "selecting_highlights", "rendering", "finalizing"]
+STAGES = [
+    "queued",
+    "ingesting",
+    "transcribing",
+    "detecting_scenes",
+    "selecting_highlights",
+    "rendering",
+    "finalizing",
+]
 
 
 class Job(Base):
