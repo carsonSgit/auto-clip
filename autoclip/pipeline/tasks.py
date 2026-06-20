@@ -53,6 +53,7 @@ def run_job(self, job_id: str) -> None:
     paths = job_paths(job_id)
     paths["work"].mkdir(parents=True, exist_ok=True)
     paths["output"].mkdir(parents=True, exist_ok=True)
+    cleanup_upload = False
 
     try:
         with SessionLocal() as session:
@@ -156,6 +157,7 @@ def run_job(self, job_id: str) -> None:
         )
 
         _set_status(job_id, "complete")
+        cleanup_upload = True
     except Exception as exc:
         logger.exception("Job %s failed (attempt %s)", job_id, self.request.retries + 1)
         if self.request.retries < self.max_retries:
@@ -165,8 +167,11 @@ def run_job(self, job_id: str) -> None:
             _cleanup_work(paths["work"])
             raise self.retry(exc=exc, countdown=15) from exc
         _set_status(job_id, "failed", error=f"{type(exc).__name__}: {exc}")
+        cleanup_upload = True
     finally:
         _cleanup_work(paths["work"])
+        if cleanup_upload:
+            _cleanup_upload(paths["upload"])
 
 
 def _mark_clip(job_id: str, index: int, status: str) -> None:
@@ -230,3 +235,7 @@ def _find_source(upload_dir: Path) -> Path:
 
 def _cleanup_work(work_dir: Path) -> None:
     shutil.rmtree(work_dir, ignore_errors=True)
+
+
+def _cleanup_upload(upload_dir: Path) -> None:
+    shutil.rmtree(upload_dir, ignore_errors=True)

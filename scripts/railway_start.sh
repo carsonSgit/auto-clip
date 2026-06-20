@@ -9,6 +9,18 @@ set -euo pipefail
 
 concurrency="${CELERY_CONCURRENCY:-1}"
 port="${PORT:-8000}"
+cleanup_keep_days="${CLEANUP_KEEP_DAYS:-1}"
+
+echo "Starting daily cleanup loop (keep-days=${cleanup_keep_days})..."
+while true; do
+  cleanup_args=(--apply --keep-days "${cleanup_keep_days}")
+  if [[ "${CLEANUP_OUTPUTS:-1}" == "1" ]]; then
+    cleanup_args+=(--outputs)
+  fi
+  python scripts/cleanup.py "${cleanup_args[@]}" || true
+  sleep "${CLEANUP_INTERVAL_SECONDS:-86400}"
+done &
+cleanup_pid=$!
 
 echo "Starting Celery worker (concurrency=${concurrency})..."
 celery -A autoclip.pipeline.celery_app worker --loglevel=info --concurrency="${concurrency}" &
@@ -19,9 +31,9 @@ uvicorn autoclip.web.app:app --host 0.0.0.0 --port "${port}" &
 web_pid=$!
 
 # If either process dies, take the whole service down so Railway restarts it.
-trap 'kill "${worker_pid}" "${web_pid}" 2>/dev/null || true' TERM INT
+trap 'kill "${cleanup_pid}" "${worker_pid}" "${web_pid}" 2>/dev/null || true' TERM INT
 wait -n
 status=$?
 echo "A process exited (status ${status}); shutting the service down."
-kill "${worker_pid}" "${web_pid}" 2>/dev/null || true
+kill "${cleanup_pid}" "${worker_pid}" "${web_pid}" 2>/dev/null || true
 exit "${status}"

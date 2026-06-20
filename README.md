@@ -44,12 +44,14 @@ phrase rendering automatically.
 ## Maintenance
 
 Failed stages retry once automatically (reusing the saved transcript). Renders
-run `RENDER_PARALLELISM` ffmpeg processes at a time (default 2). Reclaim disk
-from old jobs with:
+run `RENDER_PARALLELISM` ffmpeg processes at a time (default 2). Completed jobs
+delete their source uploads automatically; hosted deploys also prune old outputs.
+Reclaim disk from old jobs manually with:
 
 ```bash
 docker compose run --rm web python scripts/cleanup.py            # dry run
 docker compose run --rm web python scripts/cleanup.py --apply    # delete uploads/work >14d
+docker compose run --rm web python scripts/cleanup.py --apply --outputs --keep-days 3
 ```
 
 ## Branding

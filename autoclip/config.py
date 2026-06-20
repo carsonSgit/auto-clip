@@ -24,7 +24,8 @@ class Settings(BaseSettings):
     render_parallelism: int = 2  # concurrent ffmpeg renders; ffmpeg is itself multithreaded
 
     # Reject uploads larger than this (defense against disk exhaustion).
-    max_upload_mb: int = 2048
+    max_upload_mb: int = 1024
+    upload_free_space_reserve_mb: int = 1536
 
     default_clip_count: int = 4
     min_clip_seconds: int = 20
@@ -41,6 +42,10 @@ class Settings(BaseSettings):
     @property
     def max_upload_bytes(self) -> int:
         return self.max_upload_mb * 1024 * 1024
+
+    @property
+    def upload_free_space_reserve_bytes(self) -> int:
+        return self.upload_free_space_reserve_mb * 1024 * 1024
 
     @property
     def anthropic_enabled(self) -> bool:

@@ -25,6 +25,16 @@ def test_set_status_missing_job_is_noop():
     tasks._set_status("0" * 32, "complete")
 
 
+def test_cleanup_upload_removes_upload_dir(tmp_path):
+    upload_dir = tmp_path / "uploads" / "job"
+    upload_dir.mkdir(parents=True)
+    (upload_dir / "source.mp4").write_bytes(b"video")
+
+    tasks._cleanup_upload(upload_dir)
+
+    assert not upload_dir.exists()
+
+
 def test_excerpt_truncates_long_text():
     segments = [{"start": 0.0, "end": 100.0, "text": "word " * 200}]
     transcript = {"segments": segments}

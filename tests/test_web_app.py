@@ -6,7 +6,13 @@ from fastapi.testclient import TestClient
 from autoclip.config import settings
 from autoclip.db import init_db
 from autoclip.web import app as web_app
-from autoclip.web.app import _save_upload, _UploadTooLarge, _valid_job_id
+from autoclip.web.app import (
+    _UploadStorageFull,
+    _UploadTooLarge,
+    _has_upload_capacity,
+    _save_upload,
+    _valid_job_id,
+)
 
 
 @pytest.fixture
@@ -103,6 +109,39 @@ def test_upload_rejected_when_too_large(client, monkeypatch):
     assert client.sent_tasks == []  # no job queued
 
 
+def test_upload_storage_full_is_reported_and_cleaned_up(client, monkeypatch):
+    job_id = "a" * 32
+    monkeypatch.setattr(web_app.uuid, "uuid4", lambda: type("FakeUUID", (), {"hex": job_id})())
+    monkeypatch.setattr(
+        web_app,
+        "_save_upload",
+        lambda *args, **kwargs: (_ for _ in ()).throw(_UploadStorageFull),
+    )
+
+    resp = client.post(
+        "/jobs",
+        files={"file": ("talk.mp4", io.BytesIO(b"some bytes"), "video/mp4")},
+        follow_redirects=False,
+    )
+
+    assert resp.status_code == 507
+    assert b"storage is full" in resp.content.lower()
+    assert not (settings.uploads_dir / job_id).exists()
+    assert client.sent_tasks == []
+
+
+def test_has_upload_capacity_keeps_processing_reserve(monkeypatch, tmp_path):
+    monkeypatch.setattr(settings, "upload_free_space_reserve_mb", 1)
+    monkeypatch.setattr(
+        web_app.shutil,
+        "disk_usage",
+        lambda path: type("Usage", (), {"free": 2_000_000})(),
+    )
+
+    assert _has_upload_capacity(tmp_path, 900_000)
+    assert not _has_upload_capacity(tmp_path, 1_100_000)
+
+
 @pytest.mark.parametrize(
     ("job_id", "expected"),
     [
@@ -123,6 +162,23 @@ def test_save_upload_aborts_when_too_large(tmp_path):
     dest = tmp_path / "out.bin"
     with pytest.raises(_UploadTooLarge):
         _save_upload(io.BytesIO(b"x" * 1000), dest, max_bytes=100)
+
+
+def test_save_upload_reports_no_space_left(monkeypatch, tmp_path):
+    class FullDiskFile:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, traceback):
+            return False
+
+        def write(self, chunk):
+            raise OSError(28, "No space left on device")
+
+    monkeypatch.setattr(web_app.Path, "open", lambda *args, **kwargs: FullDiskFile())
+
+    with pytest.raises(_UploadStorageFull):
+        _save_upload(io.BytesIO(b"x"), tmp_path / "out.bin", max_bytes=100)
 
 
 def test_save_upload_writes_full_file(tmp_path):

@@ -1,3 +1,4 @@
+import errno
 import re
 import shutil
 import uuid
@@ -41,6 +42,10 @@ class _UploadTooLarge(Exception):
     """Raised when an upload exceeds settings.max_upload_bytes mid-stream."""
 
 
+class _UploadStorageFull(Exception):
+    """Raised when the upload volume runs out of free space mid-stream."""
+
+
 def _valid_job_id(job_id: str) -> bool:
     return bool(_JOB_ID_RE.match(job_id))
 
@@ -52,13 +57,27 @@ def _error(request: Request, message: str, status_code: int):
 def _save_upload(src: BinaryIO, dest: Path, max_bytes: int) -> int:
     """Stream an upload to disk, aborting if it exceeds max_bytes. Returns bytes written."""
     total = 0
-    with dest.open("wb") as out:
-        while chunk := src.read(_UPLOAD_CHUNK):
-            total += len(chunk)
-            if total > max_bytes:
-                raise _UploadTooLarge
-            out.write(chunk)
+    try:
+        with dest.open("wb") as out:
+            while chunk := src.read(_UPLOAD_CHUNK):
+                total += len(chunk)
+                if total > max_bytes:
+                    raise _UploadTooLarge
+                out.write(chunk)
+    except OSError as exc:
+        if exc.errno == errno.ENOSPC:
+            raise _UploadStorageFull from exc
+        raise
     return total
+
+
+def _has_upload_capacity(upload_root: Path, upload_bytes: int) -> bool:
+    """Return whether the upload volume has enough free space for upload plus processing headroom."""
+    required = upload_bytes + settings.upload_free_space_reserve_bytes
+    try:
+        return shutil.disk_usage(upload_root).free >= required
+    except FileNotFoundError:
+        return shutil.disk_usage(upload_root.parent).free >= required
 
 
 def _job_dict(job: Job) -> dict:
@@ -130,6 +149,9 @@ def create_job(
     too_large = f"File too large. Maximum upload size is {settings.max_upload_mb} MB."
     if file.size is not None and file.size > settings.max_upload_bytes:
         return _error(request, too_large, 413)
+    storage_full = "Upload storage is full. Please delete old jobs or reduce the upload size and try again."
+    if file.size is not None and not _has_upload_capacity(settings.uploads_dir, file.size):
+        return _error(request, storage_full, 507)
 
     job_id = uuid.uuid4().hex
     upload_dir = settings.uploads_dir / job_id
@@ -140,6 +162,9 @@ def create_job(
     except _UploadTooLarge:
         shutil.rmtree(upload_dir, ignore_errors=True)
         return _error(request, too_large, 413)
+    except _UploadStorageFull:
+        shutil.rmtree(upload_dir, ignore_errors=True)
+        return _error(request, storage_full, 507)
 
     job = Job(
         id=job_id,

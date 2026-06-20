@@ -34,8 +34,11 @@ repo encode that.
    | `HF_HOME` | `/data/hf-cache` | persists the ~460 MB Whisper model across restarts |
    | `ANTHROPIC_API_KEY` | *(optional)* | enables LLM highlights; omit for heuristic mode |
    | `WHISPER_MODEL` | `small` | `tiny`/`base`/`small`/`medium` (bigger = slower on CPU) |
-   | `MAX_UPLOAD_MB` | `2048` | reject larger uploads |
+   | `MAX_UPLOAD_MB` | `1024` | reject larger uploads; fits Railway's 5 GB volume cap |
+   | `UPLOAD_FREE_SPACE_RESERVE_MB` | `1536` | keep room for WAV extraction and render outputs |
    | `CELERY_CONCURRENCY` | `1` | parallel jobs; raise only with more vCPU |
+   | `CLEANUP_KEEP_DAYS` | `1` | delete old upload/work/output directories daily |
+   | `CLEANUP_OUTPUTS` | `1` | delete final exports after `CLEANUP_KEEP_DAYS` |
 
    `DATA_DIR` defaults to `/data` and `BRANDKIT_DIR` to `/app/brandkit`; no need to set them.
 
@@ -51,6 +54,13 @@ repo encode that.
 The `small` int8 model needs roughly 2 GB RAM; transcription + rendering are CPU-bound
 and run for minutes per job. Give the `app` service enough vCPU/RAM on your plan, and
 scale `CELERY_CONCURRENCY` only alongside vCPU.
+
+Railway currently caps the usable Volume for this deploy at **5 GB**, so keep
+`MAX_UPLOAD_MB=1024`, `UPLOAD_FREE_SPACE_RESERVE_MB=1536`, and `CLEANUP_OUTPUTS=1`.
+A job briefly needs the original upload plus a 16 kHz WAV extraction plus rendered
+MP4 outputs; the reserve check prevents uploads from consuming the space needed
+to finish processing. The worker deletes source uploads after jobs finish, and
+the start script runs `scripts/cleanup.py --apply` daily.
 
 ## Branding
 
